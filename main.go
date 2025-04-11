@@ -63,9 +63,9 @@ func main() {
 		})
 
 		http.HandleFunc("/addtag", func(w http.ResponseWriter, r *http.Request) {
-			tag := r.FormValue("clip")
-			fmt.Println(tag)
-			if len(tag) > 0 {
+			clip := r.FormValue("clip")
+			fmt.Println(clip)
+			if len(clip) > 0 {
 				table, err := dbase.OpenTable(&dbase.Config{
 					Filename:   "TABLE.DBF",
 					TrimSpaces: true,
@@ -80,15 +80,16 @@ func main() {
 					panic(err)
 				}
 				p := Table{
-					Clip: tag,
+					Clip: clip,
 				}
 
 				row, err = table.RowFromStruct(p)
 				if err != nil {
 					panic(err)
 				}
+				fmt.Println("test")
 				fmt.Println(row)
-				err = row.FieldByName("CLIP").SetValue(tag)
+				err = row.FieldByName("CLIP").SetValue(clip)
 				if err != nil {
 					panic(err)
 				}
@@ -167,7 +168,7 @@ func TableCheck() {
 		defer file.Close()
 
 		row, err := file.RowFromStruct(&Table{
-			Clip: "TAG",
+			Clip: "CLIP",
 		})
 		if err != nil {
 			panic(err)
@@ -191,7 +192,7 @@ func TableCheck() {
 
 func tcolumns() []*dbase.Column {
 
-	tagCol, err := dbase.NewColumn("TAG", dbase.Varchar, 80, 0, false)
+	tagCol, err := dbase.NewColumn("CLIP", dbase.Varchar, 80, 0, false)
 	if err != nil {
 		panic(err)
 	}
@@ -442,9 +443,9 @@ func TagsPage(xip string) string {
 	//------------------------------------------------------------------------
 	xdata = xdata + " Cut and Paste Map to Validate<BR><BR>"
 	xdata = xdata + "<form action='/addtag' method='post'>"
-	xdata = xdata + "<textarea id='map' name='map' rows='1' cols='20'></textarea>"
+	xdata = xdata + "<textarea id='clip' name='clip' rows='1' cols='20'></textarea>"
 	xdata = xdata + "<BR><BR>"
-	xdata = xdata + "<input type='submit' value='Add Tag'/>"
+	xdata = xdata + "<input type='submit' value='Add Clip'/>"
 	xdata = xdata + "</form>"
 	xdata = xdata + "<BR><BR>"
 	table, err := dbase.OpenTable(&dbase.Config{
