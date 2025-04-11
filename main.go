@@ -15,7 +15,9 @@ import (
 )
 
 type Table struct {
-	Clip string `dbase:"CLIP"`
+	Clipa    string `dbase:"CLIPA"`
+	Clipb    string `dbase:"CLIPB"`
+	ClipName string `dbase:"CLIPNAME"`
 }
 
 // ----------------------------------------------------------------
@@ -64,8 +66,8 @@ func main() {
 
 		http.HandleFunc("/addtag", func(w http.ResponseWriter, r *http.Request) {
 			clip := r.FormValue("clip")
-			fmt.Println(clip)
-			if len(clip) > 0 {
+			clipname := r.FormValue("clipname")
+			if len(clip) > 0 && len(clipname) > 0 { // Check both values
 				table, err := dbase.OpenTable(&dbase.Config{
 					Filename:   "TABLE.DBF",
 					TrimSpaces: true,
@@ -77,26 +79,15 @@ func main() {
 				defer table.Close()
 
 				row, err := table.RowFromStruct(&Table{
-					Clip: clip,
+					Clipa:    clip[0:254],
+					Clipb:    clip[255:len(clip)],
+					ClipName: clipname,
 				})
 				if err != nil {
 					panic(err)
 				}
 
 				err = row.Add()
-				if err != nil {
-					panic(err)
-				}
-
-				row, err = table.Row()
-				if err != nil {
-					panic(err)
-				}
-				err = row.FieldByName("CLIP").SetValue(clip)
-				if err != nil {
-					panic(err)
-				}
-				err = row.Write()
 				if err != nil {
 					panic(err)
 				}
@@ -113,9 +104,6 @@ func main() {
 
 		})
 
-		//------------------------------------------------- Static Handler Handler
-		fs := http.FileServer(http.Dir("static/"))
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
 		//------------------------------------------------- Start Server
 		TableCheck()
 		Openbrowser(xip + ":" + port)
@@ -183,14 +171,16 @@ func TableCheck() {
 
 func tcolumns() []*dbase.Column {
 
-	clipCol, err := dbase.NewColumn("Clip", dbase.Varchar, 254, 0, false)
+	clipCola, err := dbase.NewColumn("Clipa", dbase.Varchar, 254, 0, false)
+	clipColb, err := dbase.NewColumn("Clipb", dbase.Varchar, 254, 0, false)
 	clipnameCol, err := dbase.NewColumn("ClipName", dbase.Varchar, 120, 0, false)
 
 	if err != nil {
 		panic(err)
 	}
 	return []*dbase.Column{
-		clipCol,
+		clipCola,
+		clipColb,
 		clipnameCol,
 	}
 }
@@ -433,8 +423,8 @@ func ClipsPage(xip string) string {
 	//------------------------------------------------------------------------
 	xdata = xdata + " Cut and Paste Map to Validate<BR><BR>"
 	xdata = xdata + "<form action='/addtag' method='post'>"
-	xdata = xdata + "<textarea id='clip' name='clip' rows='1' cols='20'></textarea>"
-	xdata = xdata + "<BR><BR>"
+	xdata = xdata + "Clip Name:<BR> <textarea id='clipname' name='clipname' rows='1' cols='50'></textarea><br><br>"
+	xdata = xdata + "Clip:<BR> <textarea id='clip' name='clip' rows='20' cols='50'></textarea><br><br>"
 	xdata = xdata + "<input type='submit' value='Add Clip'/>"
 	xdata = xdata + "</form>"
 	xdata = xdata + "<BR><BR>"
@@ -452,13 +442,33 @@ func ClipsPage(xip string) string {
 		if err != nil {
 			panic(err)
 		}
-		field := row.Field(0)
+		field := row.Field(1)
 		if field == nil {
 			panic("Field not found")
 		}
 		s := fmt.Sprintf("%v", field.GetValue())
-		xdata = xdata + "  <A HREF='http://" + xip + ":8080/tagedit?recno=" + strconv.Itoa(recno) + "'> [ " + s + " ] </A>  "
+		//	xdata = xdata + "  <A HREF='http://" + xip + ":8080/tagedit?recno=" + strconv.Itoa(recno) + "'> [ " + s + " ] </A>  "
+		xdata = xdata + s
 		xdata = xdata + "<BR>"
+		imga := row.Field(0)
+		if imga == nil {
+			panic("Field not found")
+		}
+		ia := fmt.Sprintf("%v", imga.GetValue())
+		imgb := row.Field(2)
+		if imgb == nil {
+			panic("Field not found")
+		}
+		ib := fmt.Sprintf("%v", imgb.GetValue())
+
+		//		fmt.Println(ia)
+		fmt.Println(ib)
+		i := ia + "</iframe>"
+		fmt.Println(i)
+		//xdata = xdata + "<img src=" + i + "' width='320' height='240'/>"
+		xdata = xdata + " <A HREF='http://" + xip + ":8080/tagedit?recno=" + strconv.Itoa(recno) + "'> [ " + i + " ] </A>  "
+		xdata = xdata + "<BR>"
+
 		recno++
 
 	}
