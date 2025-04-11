@@ -47,9 +47,9 @@ func main() {
 			fmt.Fprint(w, xdata)
 		})
 
-		//------------------------------------------------ Tag Page Handler
-		http.HandleFunc("/tags", func(w http.ResponseWriter, r *http.Request) {
-			xdata := TagsPage(xip)
+		//------------------------------------------------ Clip Page Handler
+		http.HandleFunc("/clips", func(w http.ResponseWriter, r *http.Request) {
+			xdata := ClipsPage(xip)
 			fmt.Fprint(w, xdata)
 
 		})
@@ -75,20 +75,23 @@ func main() {
 					panic(err)
 				}
 				defer table.Close()
-				row, err := table.Row()
+
+				row, err := table.RowFromStruct(&Table{
+					Clip: clip,
+				})
 				if err != nil {
 					panic(err)
-				}
-				p := Table{
-					Clip: clip,
 				}
 
-				row, err = table.RowFromStruct(p)
+				err = row.Add()
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println("test")
-				fmt.Println(row)
+
+				row, err = table.Row()
+				if err != nil {
+					panic(err)
+				}
 				err = row.FieldByName("CLIP").SetValue(clip)
 				if err != nil {
 					panic(err)
@@ -98,14 +101,14 @@ func main() {
 					panic(err)
 				}
 			}
-			xdata := TagsPage(xip)
+			xdata := ClipsPage(xip)
 			fmt.Fprint(w, xdata)
 
 		})
 		http.HandleFunc("/updatetag", func(w http.ResponseWriter, r *http.Request) {
-			tag := r.FormValue("tag")
+			clip := r.FormValue("clip")
 			rn := r.FormValue("recno")
-			xdata := TagUpdatePage(xip, rn, tag)
+			xdata := TagUpdatePage(xip, rn, clip)
 			fmt.Fprint(w, xdata)
 
 		})
@@ -166,18 +169,6 @@ func TableCheck() {
 			panic(err)
 		}
 		defer file.Close()
-
-		row, err := file.RowFromStruct(&Table{
-			Clip: "CLIP",
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		err = row.Add()
-		if err != nil {
-			panic(err)
-		}
 		fmt.Printf(
 			"Last modified: %v Columns count: %v Record count: %v File size: %v \n",
 			file.Header().Modified(0),
@@ -192,12 +183,15 @@ func TableCheck() {
 
 func tcolumns() []*dbase.Column {
 
-	tagCol, err := dbase.NewColumn("CLIP", dbase.Varchar, 80, 0, false)
+	clipCol, err := dbase.NewColumn("Clip", dbase.Varchar, 254, 0, false)
+	clipnameCol, err := dbase.NewColumn("ClipName", dbase.Varchar, 120, 0, false)
+
 	if err != nil {
 		panic(err)
 	}
 	return []*dbase.Column{
-		tagCol,
+		clipCol,
+		clipnameCol,
 	}
 }
 
@@ -331,7 +325,7 @@ func InitPage(xip string) string {
 	xdata = xdata + "<html>"
 	xdata = xdata + "<head>"
 	//------------------------------------------------------------------------
-	xdata = xdata + "<title>Video Web Server</title>"
+	xdata = xdata + "<title>Hosted Video Web Server</title>"
 	xdata = DateTimeDisplay(xdata)
 	//------------------------------------------------------------------------
 	xdata = xdata + "</head>"
@@ -339,7 +333,7 @@ func InitPage(xip string) string {
 
 	xdata = xdata + "<body>"
 	xdata = xdata + "<center>"
-	xdata = xdata + "<H1>Video Web Server</H1>"
+	xdata = xdata + "<H1>Hosted Video Web Server</H1>"
 	//---------
 	host, _ := os.Hostname()
 	addrs, _ := net.LookupIP(host)
@@ -355,12 +349,8 @@ func InitPage(xip string) string {
 	xdata = xdata + "<BR> Machine IP : " + xxip + "</p>"
 
 	xdata = xdata + "  <A HREF='http://" + xip + ":8080/about'> [ About ] </A>  "
-	xdata = xdata + "  <A HREF='http://" + xip + ":8080/display?page=1'> [ Display ] </A>  "
-	xdata = xdata + "  <A HREF='http://" + xip + ":8080/categories'> [ Categories ] </A>  "
-	xdata = xdata + "  <A HREF='http://" + xip + ":8080/search'> [ Search ] </A>  "
-	xdata = xdata + "  <A HREF='http://" + xip + ":8080/tags'> [ Tags ] </A>  "
-	xdata = xdata + "  <A HREF='http://" + xip + ":8080/static/index.html'> [ Static Index ] </A>  "
-	xdata = xdata + "<BR><BR>Video Web Server"
+	xdata = xdata + "  <A HREF='http://" + xip + ":8080/clips'> [ Clips ] </A>  "
+	xdata = xdata + "<BR><BR>Hosted Video Web Server"
 
 	//------------------------------------------------------------------------
 
@@ -383,7 +373,7 @@ func AboutPage(xip string) string {
 	xdata = DateTimeDisplay(xdata)
 	xdata = xdata + "<style>"
 	xdata = xdata + "body {"
-	xdata = xdata + "    background-color: lightblue;"
+	xdata = xdata + "    background-color: lightgreen;"
 	xdata = xdata + "}"
 	xdata = xdata + "	h1 {"
 	xdata = xdata + "	color: white;"
@@ -397,17 +387,17 @@ func AboutPage(xip string) string {
 	xdata = xdata + "</head>"
 	//------------------------------------------------------------------------
 	xdata = xdata + "<body onload='startTime()'>"
-	xdata = xdata + "<p>Video Web Server</p>"
+	xdata = xdata + "<p>Hosted Video Web Server</p>"
 	xdata = xdata + "<div id='txtdt'></div>"
 	//---------
 	xdata = xdata + "<BR><BR>"
-	xdata = xdata + "  <A HREF='https://github.com/Com1Software/Video-Web-Server'> [ Video Web Server GitHub Repository ] </A>  "
+	xdata = xdata + "  <A HREF='https://github.com/Com1Software/Hosted-Video-Web-Server'> [ Hosted Video Web Server GitHub Repository ] </A>  "
 	xdata = xdata + "<BR><BR>"
 	//------------------------------------------------------------------------
 	xdata = xdata + "  <A HREF='http://" + xip + ":8080'> [ Return to Start Page ] </A>  "
 	xdata = xdata + "<BR><BR>"
 
-	xdata = xdata + "Video Web Server"
+	xdata = xdata + "Hosted Video Web Server"
 	//------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------
@@ -418,13 +408,13 @@ func AboutPage(xip string) string {
 }
 
 // ----------------------------------------------------------------
-func TagsPage(xip string) string {
+func ClipsPage(xip string) string {
 	//----------------------------------------------------------------------------
 	xdata := "<!DOCTYPE html>"
 	xdata = xdata + "<html>"
 	xdata = xdata + "<head>"
 	//------------------------------------------------------------------------
-	xdata = xdata + "<title>Tags Page</title>"
+	xdata = xdata + "<title>Clips Page</title>"
 	xdata = LoopDisplay(xdata)
 	//------------------------------------------------------------------------
 	xdata = DateTimeDisplay(xdata)
@@ -432,7 +422,7 @@ func TagsPage(xip string) string {
 	//------------------------------------------------------------------------
 	xdata = xdata + "<body onload='startTime()'>"
 	xdata = xdata + "<center>"
-	xdata = xdata + "<H3>Tags Table</H3>"
+	xdata = xdata + "<H3>Clips Table</H3>"
 	xdata = xdata + "<div id='txtdt'></div>"
 	//---------
 	xdata = xdata + "<BR><BR>"
@@ -462,7 +452,6 @@ func TagsPage(xip string) string {
 		if err != nil {
 			panic(err)
 		}
-		//field := row.FieldByName("tag")
 		field := row.Field(0)
 		if field == nil {
 			panic("Field not found")
@@ -483,7 +472,7 @@ func EditTagPage(xip string, recno string) string {
 	xdata = xdata + "<html>"
 	xdata = xdata + "<head>"
 	//------------------------------------------------------------------------
-	xdata = xdata + "<title>Tags Page</title>"
+	xdata = xdata + "<title>Clips Page</title>"
 	xdata = LoopDisplay(xdata)
 	//------------------------------------------------------------------------
 	xdata = DateTimeDisplay(xdata)
@@ -498,7 +487,7 @@ func EditTagPage(xip string, recno string) string {
 	//------------------------------------------------------------------------
 	xdata = xdata + "  <A HREF='http://" + xip + ":8080'> [ Return to Start Page ] </A>  "
 	xdata = xdata + "<BR><BR>"
-	xdata = xdata + "Video Tags"
+	xdata = xdata + "Video Clips"
 
 	table, err := dbase.OpenTable(&dbase.Config{
 		Filename:   "TABLE.DBF",
@@ -525,9 +514,9 @@ func EditTagPage(xip string, recno string) string {
 	//------------------------------------------------------------------------
 	xdata = xdata + " Cut and Paste Map to Validate<BR><BR>"
 	xdata = xdata + "<form action='/updatetag?recno=" + recno + "' method='post'>"
-	xdata = xdata + "<textarea id='tag' name='tag' rows='1' cols='20'>" + s + "</textarea>"
+	xdata = xdata + "<textarea id='clip' name='clip' rows='1' cols='20'>" + s + "</textarea>"
 	xdata = xdata + "<BR><BR>"
-	xdata = xdata + "<input type='submit' value='Upadte Tag'/>"
+	xdata = xdata + "<input type='submit' value='Upadte Clip'/>"
 	xdata = xdata + "</form>"
 	xdata = xdata + "<BR><BR>"
 	xdata = xdata + "<BR>"
@@ -542,7 +531,7 @@ func TagUpdatePage(xip string, recno string, tag string) string {
 	xdata = xdata + "<html>"
 	xdata = xdata + "<head>"
 	//------------------------------------------------------------------------
-	xdata = xdata + "<title>Tag Update</title>"
+	xdata = xdata + "<title>Clip Update</title>"
 	xdata = LoopDisplay(xdata)
 	//------------------------------------------------------------------------
 	xdata = DateTimeDisplay(xdata)
@@ -550,7 +539,7 @@ func TagUpdatePage(xip string, recno string, tag string) string {
 	//------------------------------------------------------------------------
 	xdata = xdata + "<body onload='startTime()'>"
 	xdata = xdata + "<center>"
-	xdata = xdata + "<H3>Tag Update</H3>"
+	xdata = xdata + "<H3>Clip Update</H3>"
 	xdata = xdata + "<div id='txtdt'></div>"
 	//---------
 	xdata = xdata + "<BR><BR>"
@@ -572,7 +561,7 @@ func TagUpdatePage(xip string, recno string, tag string) string {
 	if err != nil {
 		panic(err)
 	}
-	err = row.FieldByName("TAG").SetValue(tag)
+	err = row.FieldByName("CLIP").SetValue(tag)
 	if err != nil {
 		xdata = xdata + err.Error()
 	}
@@ -583,7 +572,7 @@ func TagUpdatePage(xip string, recno string, tag string) string {
 	}
 	xdata = xdata + "<BR>Complete<BR><BR>"
 	//------------------------------------------------------------------------
-	xdata = xdata + "  <A HREF='http://" + xip + ":8080/tags'> [ Return to Tags ] </A>  "
+	xdata = xdata + "  <A HREF='http://" + xip + ":8080/clips'> [ Return to Clips ] </A>  "
 	xdata = xdata + "<BR><BR>"
 	//------------------------------------------------------------------------
 	xdata = xdata + "  <A HREF='http://" + xip + ":8080'> [ Return to Start Page ] </A>  "
