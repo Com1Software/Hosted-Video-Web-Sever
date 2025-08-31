@@ -79,8 +79,8 @@ func main() {
 				defer table.Close()
 
 				row, err := table.RowFromStruct(&Table{
-					Clipa:    clip[0:254],
-					Clipb:    clip[255:len(clip)],
+					Clipa:    clip,
+					Clipb:    "",
 					ClipName: clipname,
 				})
 				if err != nil {
